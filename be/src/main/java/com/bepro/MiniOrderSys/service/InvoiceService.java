@@ -48,8 +48,7 @@ public class InvoiceService {
         savedInvoice.getPaymentStatus(),
         savedInvoice.getPaidAt(),
         savedInvoice.getCreatedAt(),
-        paymentUrl
-    );
+        paymentUrl);
   }
 
   @Transactional(readOnly = true)
@@ -66,27 +65,29 @@ public class InvoiceService {
 
     CafeOrder order = cafeOrderRepository.findById(request.orderId())
         .orElseThrow(() -> {
-            log.error("Order lookup failed: Order not found [orderId:{}]", request.orderId());
-            return new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
+          log.error("Order lookup failed: Order not found [orderId:{}]", request.orderId());
+          return new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found");
         });
 
     if (order.getStatus() != OrderStatus.ORDERED && order.getStatus() != OrderStatus.COMPLETED) {
-      log.warn("Invalid order status for payment processing [orderId:{}, currentStatus:{}]", order.getId(), order.getStatus());
+      log.warn("Invalid order status for payment processing [orderId:{}, currentStatus:{}]", order.getId(),
+          order.getStatus());
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order status is invalid for invoice processing");
     }
 
     Invoice invoice = invoiceRepository.findByOrderId(request.orderId())
         .orElseGet(() -> {
-            log.debug("No existing invoice found. Constructing new invoice [orderId:{}]", request.orderId());
-            return Invoice.builder()
-                .order(order)
-                .totalAmount(order.getTotalAmount())
-                .createdAt(LocalDateTime.now())
-                .build();
+          log.debug("No existing invoice found. Constructing new invoice [orderId:{}]", request.orderId());
+          return Invoice.builder()
+              .order(order)
+              .totalAmount(order.getTotalAmount())
+              .createdAt(LocalDateTime.now())
+              .build();
         });
 
     if (invoice.getPaymentStatus() == PaymentStatus.COMPLETED) {
-      log.warn("Payment rejected: Invoice is already completed [invoiceId:{}, orderId:{}]", invoice.getId(), request.orderId());
+      log.warn("Payment rejected: Invoice is already completed [invoiceId:{}, orderId:{}]", invoice.getId(),
+          request.orderId());
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invoice is already completed and cannot be modified");
     }
 
@@ -95,10 +96,12 @@ public class InvoiceService {
     invoice.setPaidAt(request.paymentStatus() == PaymentStatus.COMPLETED ? LocalDateTime.now() : null);
 
     Invoice savedInvoice = invoiceRepository.save(invoice);
-    log.info("Invoice persisted successfully [invoiceId:{}, totalAmount:{}]", savedInvoice.getId(), savedInvoice.getTotalAmount());
+    log.info("Invoice persisted successfully [invoiceId:{}, totalAmount:{}]", savedInvoice.getId(),
+        savedInvoice.getTotalAmount());
 
     if (request.paymentStatus() == PaymentStatus.COMPLETED) {
-      log.info("Cash payment processed. Marking order as completed and releasing table [orderId:{}, tableNumber:{}]", order.getId(), order.getTable().getTableNumber());
+      log.info("Cash payment processed. Marking order as completed and releasing table [orderId:{}, tableNumber:{}]",
+          order.getId(), order.getTable().getTableNumber());
       order.setStatus(OrderStatus.COMPLETED);
       cafeOrderRepository.save(order);
 
@@ -108,6 +111,7 @@ public class InvoiceService {
     }
 
     String paymentUrl = null;
+    log.info("Checking payment method: [requested:{}, enum:VNPAY]", request.paymentMethod());
     if (request.paymentMethod() == PaymentMethod.VNPAY && request.paymentStatus() != PaymentStatus.COMPLETED) {
       try {
         log.info("Requesting VNPay payment URL generation [invoiceId:{}]", savedInvoice.getId());
@@ -116,22 +120,24 @@ public class InvoiceService {
       } catch (Exception e) {
         log.error("Failed to generate VNPay payment URL [invoiceId:{}]", savedInvoice.getId(), e);
       }
+    } else {
+      log.info("Skipping VNPay URL generation for non-VNPAY method: {}", request.paymentMethod());
     }
 
     InvoiceResponse response = toResponse(savedInvoice, paymentUrl);
     messagingTemplate.convertAndSend("/topic/admin/orders", response);
-    
+
     log.info("Payment processing finalized [orderId:{}]", request.orderId());
     return response;
   }
 
   @Transactional
   public InvoiceResponse complete(Long id) {
-    log.info("Processing VNPay payment completion [invoiceId:{}]", id);
+    log.info("Processing manual payment completion [invoiceId:{}]", id);
     Invoice invoice = invoiceRepository.findById(id)
         .orElseThrow(() -> {
-            log.error("Payment completion failed: Invoice not found [invoiceId:{}]", id);
-            return new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found");
+          log.error("Payment completion failed: Invoice not found [invoiceId:{}]", id);
+          return new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found");
         });
 
     if (invoice.getPaymentStatus() == PaymentStatus.COMPLETED) {
@@ -155,8 +161,41 @@ public class InvoiceService {
 
     InvoiceResponse response = toResponse(savedInvoice, null);
     messagingTemplate.convertAndSend("/topic/admin/orders", response);
-    
-    log.info("VNPay payment completion finalized successfully [invoiceId:{}]", id);
+
+    log.info("Payment completion finalized successfully [invoiceId:{}]", id);
+    return response;
+  }
+
+  @Transactional
+  public InvoiceResponse reject(Long id) {
+    log.info("Rejecting payment [invoiceId:{}]", id);
+    Invoice invoice = invoiceRepository.findById(id)
+        .orElseThrow(() -> {
+          log.error("Payment rejection failed: Invoice not found [invoiceId:{}]", id);
+          return new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found");
+        });
+
+    if (invoice.getPaymentStatus() == PaymentStatus.COMPLETED) {
+      log.error("Cannot reject a completed invoice [invoiceId:{}]", id);
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot reject a completed invoice");
+    }
+
+    invoice.setPaymentStatus(PaymentStatus.CANCELLED);
+    Invoice savedInvoice = invoiceRepository.save(invoice);
+    log.debug("Invoice status set to CANCELLED [invoiceId:{}]", id);
+
+    CafeOrder order = invoice.getOrder();
+    order.setStatus(OrderStatus.CANCELLED);
+    cafeOrderRepository.save(order);
+
+    CafeTable table = order.getTable();
+    table.setStatus(TableStatus.AVAILABLE);
+    cafeTableRepository.save(table);
+
+    InvoiceResponse response = toResponse(savedInvoice, null);
+    messagingTemplate.convertAndSend("/topic/admin/orders", response);
+
+    log.info("Invoice rejected and order cancelled [invoiceId:{}]", id);
     return response;
   }
 }

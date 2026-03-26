@@ -66,12 +66,16 @@ export default function InvoiceHistory() {
             <div 
               key={inv.id} 
               className={`group grid grid-cols-1 md:grid-cols-[auto_1fr_120px_160px_140px] items-center gap-4 bg-white p-5 rounded-3xl border transition-all hover:shadow-lg ${
-                inv.paymentStatus === 'COMPLETED' ? 'border-slate-100 shadow-sm' : 'border-amber-200 bg-amber-50/20 shadow-amber-100/50 shadow-md'
+                inv.paymentStatus === 'COMPLETED' ? 'border-slate-100 shadow-sm' : 
+                inv.paymentStatus === 'CANCELLED' ? 'border-rose-100 bg-rose-50/5 opacity-80' :
+                'border-amber-200 bg-amber-50/20 shadow-amber-100/50 shadow-md'
               }`}
             >
               {/* Cột 1: Bàn */}
               <div className={`h-14 w-14 rounded-2xl flex flex-col items-center justify-center shrink-0 ${
-                inv.paymentStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                inv.paymentStatus === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600' : 
+                inv.paymentStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-600' :
+                'bg-amber-50 text-amber-600'
               }`}>
                 <span className="text-[10px] font-black uppercase leading-tight">Bàn</span>
                 <span className="text-xl font-black leading-tight">{inv.tableNumber}</span>
@@ -81,8 +85,16 @@ export default function InvoiceHistory() {
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">Hóa đơn #{inv.id}</span>
-                  <Badge variant={inv.paymentStatus === 'COMPLETED' ? "secondary" : "destructive"} className="text-[9px] h-4 px-1 font-black shadow-none border-none whitespace-nowrap">
-                    {inv.paymentStatus === 'COMPLETED' ? 'Hoàn tất' : 'Đang xử lý'}
+                  <Badge 
+                    variant={inv.paymentStatus === 'COMPLETED' ? "secondary" : "destructive"} 
+                    className={`text-[9px] h-4 px-1 font-black shadow-none border-none whitespace-nowrap ${
+                      inv.paymentStatus === 'COMPLETED' ? 'bg-emerald-500 text-white' : 
+                      inv.paymentStatus === 'CANCELLED' ? 'bg-rose-500 text-white' : 
+                      'bg-amber-500 text-white'
+                    }`}
+                  >
+                    {inv.paymentStatus === 'COMPLETED' ? 'Hoàn tất' : 
+                     inv.paymentStatus === 'CANCELLED' ? 'Đã hủy' : 'Chờ xử lý'}
                   </Badge>
                 </div>
                 <h4 className="font-black text-lg text-slate-800 truncate">Mã đơn: <span className="text-primary">#{inv.orderId}</span></h4>

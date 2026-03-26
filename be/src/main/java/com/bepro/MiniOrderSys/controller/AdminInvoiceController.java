@@ -32,4 +32,9 @@ public class AdminInvoiceController {
     public ResponseEntity<InvoiceResponse> completeInvoice(@PathVariable Long id) {
         return ResponseEntity.ok(invoiceService.complete(id));
     }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<InvoiceResponse> rejectInvoice(@PathVariable Long id) {
+        return ResponseEntity.ok(invoiceService.reject(id));
+    }
 }

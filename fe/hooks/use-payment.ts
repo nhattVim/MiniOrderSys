@@ -22,6 +22,8 @@ export function usePayment(onSuccess?: () => void) {
   const handlePayment = async () => {
     if (!user?.token || !selectedOrderId) return;
     
+    console.log(`[DEBUG] Gửi yêu cầu thanh toán: Đơn #${selectedOrderId}, Phương thức: ${paymentMethod}`);
+    
     setIsPaying(true);
     try {
       const resp = await fetch("/api/invoices", {
@@ -40,9 +42,12 @@ export function usePayment(onSuccess?: () => void) {
       const data = await resp.json();
       if (!resp.ok) throw new Error(extractErrorMessage(data, "Lỗi tạo hóa đơn thanh toán"));
 
+      console.log("[DEBUG] Kết quả từ Backend:", data);
+
       if (paymentMethod === 'VNPAY' && data.paymentUrl) {
+         console.log("[DEBUG] Đang chuyển hướng đến VNPay...");
          window.location.href = data.paymentUrl;
-         return; // Dừng lại vì đã chuyển trang
+         return;
       }
 
       toast.success(paymentMethod === 'CASH' 

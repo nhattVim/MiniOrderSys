@@ -38,7 +38,7 @@ export function OrderCard({ order, onPaymentClick }: OrderCardProps) {
                 : 'bg-amber-50 text-amber-600'
             }`}>
               {order.status === 'COMPLETED' ? <CheckCircle2 className="h-3 w-3" /> : order.status === 'CANCELLED' ? <XCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-              {order.status}
+              {order.status === 'COMPLETED' ? 'Hoàn tất' : order.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý'}
             </div>
           </div>
           
@@ -57,7 +57,7 @@ export function OrderCard({ order, onPaymentClick }: OrderCardProps) {
                 : 'bg-amber-50 text-amber-600'
             }`}>
               {order.status === 'COMPLETED' ? <CheckCircle2 className="h-4 w-4" /> : order.status === 'CANCELLED' ? <XCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-              {order.status}
+              {order.status === 'COMPLETED' ? 'Hoàn tất' : order.status === 'CANCELLED' ? 'Đã hủy' : 'Đang xử lý'}
             </div>
           </div>
 

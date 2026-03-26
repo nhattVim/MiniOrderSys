@@ -5,6 +5,7 @@ import { formatVnd } from "@/lib/utils";
 import { 
   Loader2, 
   CheckCircle2, 
+  XCircle,
   Clock, 
   CreditCard, 
   Banknote, 
@@ -24,7 +25,8 @@ export default function OrderManagement({ token }: OrderManagementProps) {
     isLoading, 
     isProcessing, 
     fetchInvoices, 
-    handleComplete 
+    handleComplete,
+    handleReject 
   } = useInvoices(token);
 
   useEffect(() => {
@@ -114,34 +116,45 @@ export default function OrderManagement({ token }: OrderManagementProps) {
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="pt-2">
-                {inv.paymentMethod === 'CASH' ? (
-                  <Button 
-                    variant="default" 
-                    className="w-full h-12 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-xs uppercase tracking-widest gap-2"
-                    onClick={() => handleComplete(inv.id)}
-                    disabled={isProcessing === inv.id}
-                  >
-                    {isProcessing === inv.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        Xác nhận đã thu tiền
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button 
-                    variant="secondary" 
-                    className="w-full h-12 rounded-xl font-bold text-xs uppercase tracking-widest gap-2 pointer-events-none opacity-60"
-                  >
-                    <Clock className="h-4 w-4" />
-                    Chờ qua cổng VNPay
-                  </Button>
-                )}
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <Button 
+                  variant="default" 
+                  className="h-12 rounded-xl font-bold bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/10 text-[10px] uppercase tracking-wider gap-2"
+                  onClick={() => handleComplete(inv.id)}
+                  disabled={isProcessing === inv.id}
+                >
+                  {isProcessing === inv.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      Chấp nhận
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-12 rounded-xl font-bold border-2 border-rose-100 text-rose-500 hover:bg-rose-50 hover:text-rose-600 text-[10px] uppercase tracking-wider gap-2 transition-colors"
+                  onClick={() => handleReject(inv.id)}
+                  disabled={isProcessing === inv.id}
+                >
+                  {isProcessing === inv.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4" />
+                      Từ chối
+                    </>
+                  )}
+                </Button>
               </div>
+
+              {inv.paymentMethod === 'VNPAY' && (
+                <div className="px-3 py-1 bg-blue-50/50 text-blue-400 rounded-lg text-[9px] font-medium text-center italic border border-blue-50">
+                  Lưu ý: Đơn VNPay có thể xử lý thủ công nếu cổng bị kẹt
+                </div>
+              )}
 
               <div className="pt-2">
                 <p className="text-[10px] text-center text-slate-400 italic font-medium">
